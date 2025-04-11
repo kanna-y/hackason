@@ -78,11 +78,9 @@ export const insertComment = (parent, data) => {
 
   const btnTaken = document.getElementById('btnTaken');
   btnTaken.onclick = () => {
-  const now = new Date();
-  const time = now.toLocaleString(); // 例: 2025/4/11 15:30:05
-  socket.send(`${username}: ${username}さんがお薬をのみました💊（${time}）`);
-};
-
+    const now = new Date();
+  const time = now.toLocaleString(); // → 例: 2025/4/11 14:23:05
+  socket.send(`${username}:お薬飲みました💊${time}`);
 
   const data = JSON.parse(localStorage.getItem("records") || "[]");
   data.push(record);
