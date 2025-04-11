@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>お薬通知アプリ</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f1f8e9;
+      color: #333;
+      padding: 20px;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      font-family: 'Verdana', sans-serif;
+      color: #2c6e49;
+      text-align: center;
+    }
+
+    h2 {
+      font-family: 'Verdana', sans-serif;
+      color: #5e8f3a;
+    }
+
+    input[type="time"] {
+      padding: 10px;
+      margin: 10px;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 12px 20px;
+      background-color: #8bc34a;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #7cb342;
+    }
+
+    button:active {
+      background-color: #689f38;
+    }
+
+    p {
+      font-size: 18px;
+      color: #555;
+    }
+
+    #notifStatus {
+      font-size: 16px;
+      color: #3e8e41;
+    }
+
+    .section {
+      margin-bottom: 40px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>💊 おくすりマインダー</h1>
+
+  <div class="section">
+    <h2>毎日のお薬の時間を設定</h2>
+    <label for="medTime1">1回目の時間:</label>
+    <input type="time" id="medTime1">
+    
+    <label for="medTime2">2回目の時間:</label>
+    <input type="time" id="medTime2">
+    
+    <button onclick="setDailyNotifications()">通知を設定する</button>
+    <p id="notifStatus"></p>
+  </div>
+
+  <div class="section">
+    <h2>テスト通知</h2>
+    <button onclick="showCombinedNotification()">🔔 テスト通知を送る</button>
+  </div>
+
+  <!-- 通知音 -->
+  <audio id="notifySound" src="https://notificationsounds.com/storage/sounds/file-sounds-1152-pristine.mp3" preload="auto"></audio>
+
+  <script>
+    let medTimers = [];
+
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission().then(permission => {
+        if (permission !== "granted") {
+          alert("通知が許可されていません！");
+        }
+      });
+    }
+
+    function setDailyNotifications() {
+      clearAllTimers();
+
+      const time1 = document.getElementById("medTime1").value;
+      const time2 = document.getElementById("medTime2").value;
+
+      if (!time1 && !time2) {
+        alert("少なくとも1つの時間を設定してください！");
+        return;
+      }
+
+      if (time1) scheduleDaily(time1);
+      if (time2) scheduleDaily(time2);
+
+      document.getElementById("notifStatus").innerText = "毎日の通知が設定されました！";
+    }
+
+    function scheduleDaily(timeStr) {
+      const [hour, minute] = timeStr.split(":").map(Number);
+      const now = new Date();
+      const nextTime = new Date();
+
+      nextTime.setHours(hour, minute, 0, 0);
+      if (nextTime <= now) {
+        nextTime.setDate(nextTime.getDate() + 1);
+      }
+
+      const delay = nextTime - now;
+      const timer = setTimeout(() => {
+        showCombinedNotification();
+        scheduleDaily(timeStr); // 翌日も再設定
+      }, delay);
+
+      medTimers.push(timer);
+    }
+
+    function clearAllTimers() {
+      medTimers.forEach(timer => clearTimeout(timer));
+      medTimers = [];
+    }
+
+    function showCombinedNotification() {
+      const message = getMedicalMessage();
+      showNotification("💊 お薬の時間だよ！", message);
+    }
+
+    function showNotification(title, message) {
+      if (Notification.permission === "granted") {
+        new Notification(title, {
+          body: message,
+          icon: "https://cdn-icons-png.flaticon.com/512/2965/2965567.png"
+        });
+
+        // ピコン音再生
+        const sound = document.getElementById("notifySound");
+        sound.currentTime = 0;
+        sound.play();
+      }
+    }
+
+    function getMedicalMessage() {
+      const messages = [
+        "🌼 花粉情報：今週はヒノキ花粉が多く飛んでいます。外出時は眼鏡とマスクを忘れずに。",
+        "🦠 流行情報：ノロウイルスの感染報告が増加中。手洗い・うがいを徹底しましょう。",
+        "💖 あったかい一言：あなたの健康を願って、今日も応援しています。",
+        "🌸 花粉症対策：外から帰ったら服を払って、すぐにシャワーを浴びると効果的です。",
+        "🧘‍♀️ 予防医学：1日15分の軽い運動でも、免疫力がぐっと上がるよ！",
+        "☀️ あったかい一言：今日のあなたも、十分頑張ってる。少し休んでも大丈夫。",
+        "🍵 体を冷やさないように、あったかい飲み物を飲んでね。",
+        "💬 誰かに『ありがとう』って伝えるだけで、自分の心もポカポカになるよ。",
+        "🛌 しっかり寝てる？睡眠は最高の薬！",
+        "🧴 乾燥対策：加湿器や濡れタオルでお部屋の湿度をキープしよう！"
+      ];
+      const i = Math.floor(Math.random() * messages.length);
+      return messages[i];
+    }
+  </script>
+</body>
+</html>
