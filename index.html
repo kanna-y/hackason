@@ -1,4 +1,148 @@
-<a href = "kanna-y.html"> かんな </a> <br>
-<a href = "rivero117.html">りこち </a><br>
-<a href = "ryo.html">りょ</a><br>
-<a href = "oriyuu90.html">おりゆう</a><br>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>おくすりマインダー</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Hiragino Maru Gothic Pro W4', sans-serif;
+      display: flex;
+      justify-content: center; 
+      align-items: center;     
+      height: 100vh;           
+      margin: 0;
+      background: hsl(103, 30%, 60%);
+    }
+
+    #register, #chat {
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      background: rgb(221, 246, 204);
+      padding: 2rem 1rem;
+      border-radius: 1rem;
+      box-shadow: 0 0 20px rgba(255, 102, 0, 0.1);
+    }
+
+    input, button {
+      margin: 0.5rem;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: none;
+      background-color: whitesmoke;
+      color: black;
+    }
+
+    #recv {
+      text-align: left;
+      margin-top: 1rem;
+      height: 200px;
+      overflow-y: auto;
+      border: 1px solid hsl(0, 100%, 88%);
+      padding: 0.5rem;
+      background: #f1f1f1;
+      border-radius: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="register">
+    <h2>名前を入力してください</h2>
+    <input id="usernameInput" placeholder="たろう"><br>
+    <button id="btnregister">入室</button>
+  </div>
+
+  <!-- 🔶 チャット画面 -->
+  <div id="chat" style="display:none">
+    <h1>おくすりマインダー</h1>
+    <input id="room" placeholder="room name">
+    <button id="btnenter">enter</button><br><br>
+
+    <main id="main" style="display:none">
+      <input id="mes">
+      <button id="btn">send</button>
+      <button id="btnTaken">のんだよ</button>
+      <div id="recv"></div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { CBOR } from "https://js.sabae.cc/CBOR.js";
+    import { blob2bin, insertComment } from "./util.js";
+
+    let username = "";
+
+    // 🔵 名前登録 → チャット画面へ
+    btnregister.onclick = () => {
+      const nameInput = document.getElementById("usernameInput");
+      const name = nameInput.value.trim();
+
+      if (!name) {
+        alert("名前を入力してください！");
+        return;
+      }
+
+      username = name;
+      register.style.display = "none";
+      chat.style.display = "block";
+    };
+
+    // 🔶 WebSocketチャット接続
+    btnenter.onclick = () => {
+      main.style.display = "block";
+      const roomname = room.value == "" ? "default" : room.value;
+      const host = document.location.hostname;
+      const port = document.location.port ? ":" + document.location.port : "";
+      const protocol = document.location.protocol == "https:" ? "wss:" : "ws:";
+      const address = `${protocol}//${host}${port}/${roomname}/ws`;
+      const socket = new WebSocket(address);
+
+      socket.onmessage = async (msg) => {
+        const bin = await blob2bin(msg.data);
+        const data = CBOR.decode(bin);
+        insertComment(recv, data);
+      };
+
+      btn.onclick = () => {
+        socket.send(`${username}: ${mes.value}`);
+        mes.value = "";
+      };
+    };
+
+    // 🔶 薬を飲んだ記録を保存してチャット欄に表示
+    const btnTaken = document.getElementById('btnTaken');
+    btnTaken.onclick = () => {
+      const now = new Date();
+      const time = now.toLocaleString(); // 例: 2025/4/11 14:23
+      const record = {
+        user: username,
+        time: time,
+      }
+
+      // localStorageに保存
+      const data = JSON.parse(localStorage.getItem("records") || "[]");
+      data.push(record);
+      localStorage.setItem("records", JSON.stringify(data));
+
+      // チャット欄に記録表示
+      const div = document.createElement("div");
+      div.textContent = `${username} さんが薬を飲みました💊：${time}`;
+      recv.appendChild(div);
+
+      alert(`${username} さんの記録を保存しました：${time}`);
+    };
+
+    window.onload = () => {
+      const records = JSON.parse(localStorage.getItem("records") || "[]");
+
+      records.forEach((record) => {
+        const div = document.createElement("div");
+        div.textContent = `${record.user} さんが薬を飲みました💊：${record.time}`;
+        recv.appendChild(div);
+      });
+    };
+  </script>
+</body>
+</html>
